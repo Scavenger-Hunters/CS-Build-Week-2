@@ -1,16 +1,14 @@
 const adv = require("./axiosConfig");
 
-
 // adv
 //   .get('init')
 //   .then(res => console.log(res.data))
 //   .catch(err => console.log(err.message));
 
 // adv
-//   .post('move', {direction: 's'})
+//   .post('move', {direction: 's', next_room_id: "76"})
 //   .then(res => console.log("New Room: ", res.data))
-//   .catch(err => console.log(err.message));
-
+//   .catch(err => console.log(err.message, err.response.config));
 
 // Create Empty Graph
 var graph = {};
@@ -38,9 +36,9 @@ function oppositeDir(dir) {
   return result;
 }
 
-//  Global variable - currentRoom
+//  Global variable - currentRoom, room cool down, prev room id
 var currentRoom = null;
-var roomCD = 1;
+var roomCD = 16; // to cover bases... if loop() starts too soon, currentRoom is still null and fx breaks
 
 // Initialization
 adv
@@ -60,8 +58,6 @@ adv
   })
   .catch(err => console.error(err));
 
-
-
 //  ============== Recursion to Populate Graph ============
 // Loops until graph length is 500
 
@@ -70,7 +66,7 @@ function loop() {
 
   console.log("Start loop at room #: ", currentRoom.room_id);
 
-  const roomID = currentRoom.room_id
+  const roomID = currentRoom.room_id;
 
   // If current room id is not in graph object, add it as new key in graph object
 
@@ -96,7 +92,6 @@ function loop() {
   console.log("Updated graph with empty dirs: ", graph);
   console.log("Graph length: ", Object.keys(graph).length);
 
-
   // Collect list of unexplored move options of roomID in graph ("has "?" as value")
   var moveOptions = [];
 
@@ -113,141 +108,124 @@ function loop() {
 
   // moveOptions are empty (no unexplored exits) but can reverse route (backwardsPath has length)
 
-  while (moveOptions.length == 0 && backwardsPath.length) {
+  if (moveOptions.length == 0 && backwardsPath.length) {
     console.log("Oops! At dead end. Moving backwards.");
-    break;
+    // break;
 
-    var movedBack = backwardsPath.pop(); // the last move made
+    // save last move made
+    const movedBack = backwardsPath.pop();
+
+    // add that reverse move to end of traversePath arr
     traversalPath.push(movedBack);
 
+    // save id of room we're moving to as a string for wise explorer
+    const backRoomID = graph[roomID][movedBack].toString();
+    console.log("Back room ID: ", backRoomID);
+
     // Post Request to Move api with movedBack var as direction
+    setTimeout(() => {
+      
+      console.log("In Set Timeout Fx for Dead End");
 
-    // Reset current room to new returned data
-    // currentRoom = res.data
-    // console.log("I'm now at room", currentRoom.room_id)
+      adv
+        .post("move", { direction: movedBack, next_room_id: backRoomID })
+        .then(res => {
+          currentRoom = res.data;
+          roomCD = res.data.cooldown;
+          console.log("Reversed! I'm now in room", currentRoom.room_id, "cd: ", roomCD);
 
-    var new_moveOptions = [];
-
-    for (var key in graph[currentRoom.room_id]) {
-      if (graph[currentRoom.room_id][key] == "?") {
-        new_moveOptions.push(key);
-      }
-    }
-
-    // set moveOptions to these new moveOptions
-    // if still empty, the dead end while loop will repeat
-    moveOptions = new_moveOptions;
+          // Recursion
+          if (Object.keys(graph).length !== 500) {
+            console.log("Moved from dead end, repeating loop.");
+            setTimeout(() => {
+              loop();
+            }, roomCD * 1000);
+          }
+        })
+        .catch(err => console.log("Dead End POST ERR:", err.message));
+    }, roomCD * 1000);
   }
 
   // ==============  Handle Dead Ends: ==============
   // No moveOptions and can't go backwards (back at start)
-  if (moveOptions.length == 0 && backwardsPath.length == 0) {
-    console.log("Dead end and can't go back!");
-    // break
+
+  else if (moveOptions.length == 0 && backwardsPath.length == 0) {
+    console.log("Dead end and can't go back... Graph complete?");
+    console.log("Graph length @ Dead End: ", Object.keys(graph).length);
+    // break;
+    return graph; // yes??
   }
 
-  // Choose 1st item in moveOptions as next move
-  // Reset moveOptions to empty to prep for next room
+  // ==============  No Dead Ends: ==============
 
-  var nextMove = moveOptions[0];
-  moveOptions = [];
+  // But if moveOptions length > 0
 
-  // Record backwards version of move and push to backwardsPath array
-  var backwardsMove = oppositeDir(nextMove);
-  backwardsPath.push(backwardsMove);
+  else if (moveOptions.length > 0) {
 
-  // ============= GETTING ID OF NEXT ROOM =============
+    // Choose 1st item in moveOptions as next move
+    // Reset moveOptions to empty to prep for next room
 
-  // Get ID of the room in the next move direction
-  // Through Post?
-  // postDirection(nextMove);
-  // console.log("POST REQ HERE")
-  // adv
-  //   .post('move', {direction: nextMove})
-  //   .then(res => {
-  //     console.log("Post Worked!");
-  //     console.log("Post Data: ", res.data)
-  //     var nextRoomID = res.data.room_id
-  //   })
-  //   .catch(err => console.error("WHOOPS - POST ERROR!", err.response))
-  // break
+    var nextMove = moveOptions[0];
+    moveOptions = [];
 
-  // ========= REPLACING ? WITH ROOM IDs IN GRAPH
+    // Record backwards version of move and push to backwardsPath array
+    var backwardsMove = oppositeDir(nextMove);
+    backwardsPath.push(backwardsMove);
 
-  // Update Graph - replace "?" with room ID values
-  // Problematic for when creating new key in graph at beginning of while loop
-  // graph[roomID][nextMove] = nextRoomID;
-  // graph[nextRoomID] = {}; // do I need this line?
-  // graph[nextRoomID][backwardsMove] = roomID;
+    traversalPath.push(nextMove);
+    // currentRoom = postDirection(nextMove)
+    console.log("PUSHED MOVE");
 
-  // Check Graph
-  // console.log("Updated Graph: ", graph);
+    setTimeout(() => {
+      adv
+        .post("move", { direction: nextMove })
+        .then(res => {
+          console.log("New Room: ", res.data);
 
-  // Push nextMove to traversalPath
-  // Move to next room (POST req)
-  // Set currentRoom as new returned data to repeat while loop for next room
+          // save prev room ID, set new currentRoom
+          var prevRoomID = roomID;
+          currentRoom = res.data;
 
-  traversalPath.push(nextMove);
-  // currentRoom = postDirection(nextMove)
-  console.log("PUSHED MOVE");
+          // Update graph values of prevRoom
+          graph[prevRoomID][nextMove] = currentRoom.room_id;
 
-  setTimeout(() => {
-    adv
-      .post("move", { direction: nextMove })
-      .then(res => {
-        console.log("New Room: ", res.data);
-        // graph[roomID][nextMove] = nextRoomID;
-        // graph[nextRoomID] = {}; // do I need this line?
-        // graph[nextRoomID][backwardsMove] = roomID;
+          var newRoomID = currentRoom.room_id;
 
-        // Update Graph values
-        prevRoomID = roomID
-        currentRoom = res.data;
-        graph[prevRoomID][nextMove] = currentRoom.room_id;
-
-        var newRoomID = currentRoom.room_id;
-
-        // Add new room ID key to graph
-        if (!graph[newRoomID]) {
-          graph[newRoomID] = {}
-        }
-      
-        // Add newroom exit values
-        currentRoom.exits.forEach(exit => {
-          if (!graph[newRoomID][exit]) {
-            graph[newRoomID][exit] = "?";
+          // Add new room ID key to graph
+          if (!graph[newRoomID]) {
+            graph[newRoomID] = {};
           }
-        });
 
-        // set backwards move to prev room ID
-        graph[newRoomID][backwardsMove] = prevRoomID;
+          // Add newroom exit values
+          currentRoom.exits.forEach(exit => {
+            if (!graph[newRoomID][exit]) {
+              graph[newRoomID][exit] = "?";
+            }
+          });
 
-        // check out graph
-        console.log("Replaced ?s: ", graph);
+          // Update graph values of new current room with prevRoom ID
+          graph[newRoomID][backwardsMove] = prevRoomID;
 
-        roomCD = res.data.cooldown;
+          // check out updated graph
+          console.log("Replaced ?s: ", graph);
 
-        // Recursion
-        if (Object.keys(graph).length !== 500) {
-          console.log("Graph not 500 yet")
-          setTimeout(() => { loop(); }, roomCD * 1000);
-        }
-      })
-      .catch(err => console.log("POST ERR:", err.message));
+          // reset room cool down variable
+          roomCD = res.data.cooldown;
 
-
-  }, roomCD * 1000)
+          // Recursion
+          if (Object.keys(graph).length !== 500) {
+            console.log("Graph not 500 yet");
+            setTimeout(() => {
+              loop();
+            }, roomCD * 1000);
+          }
+        })
+        .catch(err => console.log("POST ERR:", err.message));
+    }, roomCD * 1000);
+  }
   
-
-  
-
 }
-
-
 
 setTimeout(() => {
   loop();
-}, roomCD * 1000)
-
-
-
+}, roomCD * 1000);
