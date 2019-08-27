@@ -129,3 +129,17 @@ while (Object.keys(graph).length !== 500) {
     .catch(err => console.log(err.message));
   // break
 }
+
+
+// =============== new_moveOptions code:
+// I don't think I need to get new move options anymore...
+// get new move options
+// const new_moveOptions = [];
+// for (var key in graph[currentRoom.room_id]) {
+//   if (graph[currentRoom.room_id][key] == "?") {
+//     new_moveOptions.push(key);
+//   }
+// }
+
+// // set moveOptions to these new moveOptions
+// moveOptions = new_moveOptions;

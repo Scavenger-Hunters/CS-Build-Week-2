@@ -6,7 +6,7 @@ const adv = require("./axiosConfig");
 //   .catch(err => console.log(err.message));
 
 // adv
-//   .post('move', {direction: 's', next_room_id: "76"})
+//   .post('move', {direction: 'w'}) // , next_room_id: "83"
 //   .then(res => console.log("New Room: ", res.data))
 //   .catch(err => console.log(err.message, err.response.config));
 
@@ -161,6 +161,8 @@ function loop() {
   // But if moveOptions length > 0
 
   else if (moveOptions.length > 0) {
+
+
 
     // Choose 1st item in moveOptions as next move
     // Reset moveOptions to empty to prep for next room
