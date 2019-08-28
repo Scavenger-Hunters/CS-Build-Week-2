@@ -1,60 +1,21 @@
 const server = require("./bc_axiosConfig");
 const shajs = require("sha.js");
 
-// 1. Get request for last_proof
-// 2. Proof_of_work(last proof)
-// 3. Hash last_proof and proof str
-// 4. Validate proof ()
-// 5. If validate proof returns false, change proof (random), repeat entire flow
-// 6. If validate proof returns true, send proof in post request to mine endpoint
+// 1. Get request for last_proof function
+// 2. In the .then():
+// 3. last proof = Stringify res.data.proof
+// 4. get difficulty
+// 5. choose starting proof number (suggested proof)
+// 6. (set up valid proof function elsewhere)
+// 7. (set up hash function elsewhere for valid proof func)
+// 8. while loop: while valid proof returns false, change proof to new random num
+// 9. Once valid proof returns true, pass the proof to the POST req at mine endpoint after cooldown time elapses (wrap in setTimeout)
+// 10. If catch error to mine endpoint, repeat main function (invoke get req func again)
 
-// let proof = 10000235791539;
-// let proof = 1;
 
-// proof_of_work function
-function proof_of_work(lastProof) {
-    lastProof_string = lastProof.toString();
 
-    console.log("Starting finding valid proof at...", proof)
-
-    if (!valid_proof(lastProof_string, proof)) {
-
-        // proof += 3
-        
-        proof = Math.floor(Math.random() * 1000000000)
-
-        console.log("Wrong proof, try again with new proof # ", proof)
-
-        //  no new_proof, so get request repeats with all other functions but with new proof
-
-    } else {
-
-        console.log(">>>  !!!!! FOUND Proof, posting to mind endpoint ", proof)
-
-        return proof
-        
-    }
-
-}
-
-// hash function for valid proof()
-function hash(string) {
-    return shajs('sha256').update(string).digest('hex')
-  }
-
-// valid_proof function
-function valid_proof(lastProof_string, proof) {
-
-    const guess_hash = hash(`${lastProof_string}${proof}`)
-
-    // console.log("Proof + Hash: ", proof, guess_hash)
-
-    return guess_hash.startsWith("000000")
-
-}
 
 // #1: GET request to retrieve last proof and difficulty value
-
 function getLastProof() {
 
     let last_proof = "";
@@ -63,11 +24,12 @@ function getLastProof() {
         .get('last_proof/')
         .then(res => { 
             console.log("Get Req Success", res.data);
-            last_proof = JSON.stringify(res.data.proof);
 
+            last_proof = JSON.stringify(res.data.proof);
+            let difficulty = res.data.difficulty;
             let proof = 57691853 // proof
 
-            while (!valid_proof(last_proof, proof)) {
+            while (!valid_proof(last_proof, proof, difficulty)) {
 
                 proof = Math.floor(Math.random() * 1000000000);
                 // console.log("Wrong proof, try again with new proof # ", proof)
@@ -77,7 +39,7 @@ function getLastProof() {
             // Post proof to mine endpoint 
             // add setTimeout here?
             setTimeout(() => {
-                console.log(">>>  !!!!! FOUND Proof, posting to mind endpoint ", proof)
+                console.log(">>>  !!!!! FOUND Proof, posting to mine endpoint ", proof)
 
                 server
                 .post('mine/', {"proof": proof})
@@ -92,6 +54,29 @@ function getLastProof() {
  
         })
         .catch(err => console.log("GET req error:", err))
+
+}
+
+
+// #7. hash function for valid proof()
+function hash(string) {
+    return shajs('sha256').update(string).digest('hex')
+  }
+
+// #6. valid_proof function
+function valid_proof(lastProof_string, proof, difficulty) {
+
+    const guess_hash = hash(`${lastProof_string}${proof}`)
+    // console.log("Proof + Hash: ", proof, guess_hash)
+
+    var leadingZeros = "";
+
+    for (let i = 0; i < difficulty; i++){
+        leadingZeros += 0
+    }
+    // console.log("Leading Zeros: ", leadingZeros);
+
+    return guess_hash.startsWith(leadingZeros) // startsWith "000000" when difficulty is 6
 
 }
 

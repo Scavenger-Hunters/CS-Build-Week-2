@@ -1,5 +1,6 @@
 const adv = require("./axiosConfig");
 
+// Uncomment to check current room and move manually
 // adv
 //   .get('init')
 //   .then(res => console.log(res.data))
@@ -77,7 +78,7 @@ function loop() {
 
     pirateRoomID = currentRoom.room_id;
 
-    return pirateRoomID;
+    // return pirateRoomID;
   }
 
   // If current room id is not in graph object, add it as new key in graph object
