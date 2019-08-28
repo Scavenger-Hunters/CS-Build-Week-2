@@ -39,6 +39,9 @@ function oppositeDir(dir) {
 //  Global variable - currentRoom, room cool down, prev room id
 var currentRoom = null;
 var roomCD = 16; // to cover bases... if loop() starts too soon, currentRoom is still null and fx breaks
+var pirateRoomID = null; // if (currentRoom.title.includes("Pirate")) {pirateRoomID = currentRoom.room_id}
+var mineRoomID = null;
+var shopRoomID = 1;
 
 // Initialization
 adv
@@ -68,9 +71,18 @@ function loop() {
 
   const roomID = currentRoom.room_id;
 
-  // If current room id is not in graph object, add it as new key in graph object
+  // If current room title contains Pirate (is Pirate Ry's room)
+  if (currentRoom.title.includes("Pirate")) {
+    console.log(" >>>>>>>>>>>>>>>>>>> LOOK Pirate Ry's Room: ", currentRoom.room_id);
 
+    pirateRoomID = currentRoom.room_id;
+
+    return pirateRoomID;
+  }
+
+  // If current room id is not in graph object, add it as new key in graph object
   if (!graph[roomID]) {
+
     // Add Room ID to graph object
     // var roomID = currentRoom.room_id;
     graph[roomID] = {}; // []
@@ -153,7 +165,7 @@ function loop() {
     console.log("Dead end and can't go back... Graph complete?");
     console.log("Graph length @ Dead End: ", Object.keys(graph).length);
     // break;
-    return graph; // yes??
+    // return graph; // yes??
   }
 
   // ==============  No Dead Ends: ==============
@@ -162,7 +174,9 @@ function loop() {
 
   else if (moveOptions.length > 0) {
 
-
+    // check room for items, and add to inventory
+    // check if inventory is full, if so, return to shop (room 1)
+    // at shop, sell inventory
 
     // Choose 1st item in moveOptions as next move
     // Reset moveOptions to empty to prep for next room
