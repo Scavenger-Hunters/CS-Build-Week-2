@@ -1,23 +1,24 @@
 const adv = require("./axiosConfig");
 const SHA256 = require("crypto-js/sha256");
+const axios = require("axios");
 
 // Initialization
-adv
-  .get("init")
-  .then(res => {
-    console.log("Init: ", res.data);
+// adv
+//   .get("init")
+//   .then(res => {
+//     console.log("Init: ", res.data);
 
-    // Set Current Room as res.data
-    currentRoom = res.data;
+//     // Set Current Room as res.data
+//     currentRoom = res.data;
 
-    // Check ID and Exit data
-    console.log("ID: ", currentRoom.room_id);
-    console.log("Exits: ", currentRoom.exits);
+//     // Check ID and Exit data
+//     console.log("ID: ", currentRoom.room_id);
+//     console.log("Exits: ", currentRoom.exits);
 
-    // get cooldown value for current room for setTimeout()
-    roomCD = currentRoom.cooldown;
-  })
-  .catch(err => console.error(err));
+//     // get cooldown value for current room for setTimeout()
+//     roomCD = currentRoom.cooldown;
+//   })
+//   .catch(err => console.error(err));
 
 // Creating Blockchain class
 
@@ -90,3 +91,56 @@ class BlockChain {
     return true;
   }
 }
+
+while (true) {
+  axios
+    .get("https://lambda-treasure-hunt.herokuapp.com/api/bc/last_proof/")
+    .then(res => {
+      console.log("last_proof", res.data);
+
+      currentBlock = res.data;
+      lastProof = currentBlock.proof;
+      new_proof = Block.mineBlock(currentBlock.difficulty);
+      console.log("new_proof", new_proof);
+
+      post_data = {
+        'proof': new_proof
+      };
+
+    //   setTimeout(() => {
+    //     axios
+    //       .post(
+    //         "https://lambda-treasure-hunt.herokuapp.com/api/bc/mine/",
+    //         post_data
+    //       )
+    //       .then(res => {
+    //         new_block_mined = res.data;
+    //         console.log("new_block_mined", new_block_mined);
+    //       })
+    //       .catch(err => console.log(`new block not mined, error: ${err}`));
+    //   }, currentBlock.cooldown * 1000);
+    })
+    .catch(err => console.log(`Did not make get request for proof: ${err}`));
+}
+
+// while True:
+//         r = requests.get(url=node + '/last_block')
+//         data = r.json()
+//         last_block = data['last_block']
+//         print('Last block is:')
+//         print(last_block)
+//         new_proof = proof_of_work(last_block)
+//         print('found a proof: {new_proof}')
+
+//         post_data = {
+//             'proof': new_proof
+//         }
+
+//         r = requests.post(url=node + '/mine', json=post_data)
+//         data = r.json()
+
+//         if data['message'] == 'New Block Forged':
+//             # keep track of the coins we've mined
+//             print(data['message'])
+//         else:
+//             print('handle failure message')
