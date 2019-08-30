@@ -1,6 +1,8 @@
 const server = require("./bc_axiosConfig");
 const shajs = require("sha.js");
 
+// USE THIS FILE
+
 // 1. Get request for last_proof function
 // 2. In the .then():
 // 3. last proof = Stringify res.data.proof
