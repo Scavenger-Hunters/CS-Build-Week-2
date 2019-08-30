@@ -1,91 +1,84 @@
 const server = require("./bc_axiosConfig");
 const shajs = require("sha.js");
 
-// 1. Get request for last_proof
-// 2. Proof_of_work(last proof)
-// 3. Hash last_proof and proof str
-// 4. Validate proof ()
-// 5. If validate proof returns false, change proof (random), repeat entire flow
-// 6. If validate proof returns true, send proof in post request to mine endpoint
+// USE THIS FILE
 
-// let proof = 10000235791539;
-let proof = 1;
+// 1. Get request for last_proof function
+// 2. In the .then():
+// 3. last proof = Stringify res.data.proof
+// 4. get difficulty
+// 5. choose starting proof number (suggested proof)
+// 6. (set up valid proof function elsewhere, don't need proof_of_work)
+// 7. (set up hash function elsewhere for valid proof func)
+// 8. while loop: while valid proof returns false, change proof to new random num
+// 9. Once valid proof returns true, pass the proof to the POST req at mine endpoint after cooldown time elapses (wrap in setTimeout)
+// 10. If catch error to mine endpoint, repeat main function (invoke get req func again)
 
-// proof_of_work function
-function proof_of_work(lastProof) {
-    lastProof_string = lastProof.toString();
 
-    console.log("Starting finding valid proof at...", proof)
 
-    if (!valid_proof(lastProof_string, proof)) {
 
-        // proof += 3
+// #1: GET request to retrieve last proof and difficulty value
+function getLastProof() {
+
+    let last_proof = "";
+    
+    server
+        .get('last_proof/')
+        .then(res => { 
+            console.log("Get Req Success", res.data);
+
+            last_proof = JSON.stringify(res.data.proof);
+            let difficulty = res.data.difficulty;
+            let proof = 57691853 // proof
+
+            while (!valid_proof(last_proof, proof, difficulty)) {
+
+                proof = Math.floor(Math.random() * 1000000000);
+                // console.log("Wrong proof, try again with new proof # ", proof)
+            }
+
+            // If valid_proof returns true
+            // Post proof to mine endpoint 
+            // add setTimeout here?
+            setTimeout(() => {
+                console.log(">>>  !!!!! FOUND Proof, posting to mine endpoint ", proof)
+
+                server
+                .post('mine/', {"proof": proof})
+                .then(res => { 
+                    console.log("Success!", res.data);
         
-        proof = Math.floor(Math.random() * 1000000000)
-
-        console.log("Wrong proof, try again with new proof # ", proof)
-
-        //  no new_proof, so get request repeats with all other functions but with new proof
-
-    } else {
-
-        console.log(">>>  !!!!! FOUND Proof, posting to mind endpoint ", proof)
-
-        return proof
-        
-    }
+                })
+                .catch(err => {
+                    console.log("Post Proof Error!", err.response); 
+                    getLastProof();})
+            }, 1000)
+ 
+        })
+        .catch(err => console.log("GET req error:", err))
 
 }
 
-// hash function for valid proof()
+
+// #7. hash function for valid proof()
 function hash(string) {
     return shajs('sha256').update(string).digest('hex')
   }
 
-// valid_proof function
-function valid_proof(lastProof_string, proof) {
+// #6. valid_proof function
+function valid_proof(lastProof_string, proof, difficulty) {
 
     const guess_hash = hash(`${lastProof_string}${proof}`)
+    // console.log("Proof + Hash: ", proof, guess_hash)
 
-    console.log("Proof + Hash: ", proof, guess_hash)
+    var leadingZeros = "";
 
-    return guess_hash.startsWith("0")
+    for (let i = 0; i < difficulty; i++){
+        leadingZeros += 0
+    }
+    // console.log("Leading Zeros: ", leadingZeros);
 
-}
-
-// #1: GET request to retrieve last proof and difficulty value
-
-function getLastProof() {
-    server
-        .get('last_proof/')
-        .then(res => { 
-            console.log("Got Last Proof!", res.data);
-            const last_proof = res.data.proof;
-            const new_proof = proof_of_work(last_proof)
-
-            if (new_proof) {
-
-                // Post proof to mine endpoint 
-                // add setTimeout here?
-                setTimeout(() => {
-                    server
-                    .post('mine/', {"proof": new_proof})
-                    .then(res => { 
-                        console.log("Success!", res.data);
-            
-                    })
-                    .catch(err => console.log("Post Proof Error!", err.response))
-                }, 1000)
-                
-            }
-            else {
-                
-                // recursion
-                //getLastProof()
-                setTimeout(() => { getLastProof()}, 1000)
-            }
-        })
-        .catch(err => console.log("GET req error:", err))
+    return guess_hash.startsWith(leadingZeros) // startsWith "000000" when difficulty is 6
 
 }
 
